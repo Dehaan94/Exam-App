@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Exam Practice Hub</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header>
+
+      <div class="hero-label">Exam prep</div>
+      <h1>Exam Practice Hub</h1>
+      <p>Choose an exam set, answer each question, and review explanations as you practice.</p>
+    </header>
+
+    <main>
+      <section class="controls controls--top">
+        <label class="select-wrap" for="examSelect">
+          <span>Practice Exam</span>
+          <select id="examSelect"></select>
+        </label>
+        <button id="restartQuiz">Restart</button>
+      </section>
+
+      <section class="status-panel">
+        <div class="status-chip">
+          <span>Progress</span>
+          <strong id="questionCount">0 / 0</strong>
+        </div>
+        <div class="status-chip">
+          <span>Score</span>
+          <strong id="score">0</strong>
+        </div>
+      </section>
+
+      <div class="progress-track" aria-hidden="true">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+
+      <section class="question-card">
+        <div id="questionText" class="question-text">Loading questions...</div>
+        <div id="choiceList" class="choice-list"></div>
+      </section>
+
+      <section class="controls">
+        <button id="checkAnswer" class="primary">Show Answer</button>
+        <button id="nextQuestion">Next Question</button>
+      </section>
+
+      <section id="feedback" class="feedback hidden" aria-live="polite">
+        <div id="feedbackText" class="feedback-text"></div>
+        <div id="explanation" class="explanation"></div>
+      </section>
+
+      <section id="summary" class="summary-card hidden" aria-live="polite"></section>
+    </main>
+
+    <footer>
+      <p>Ready for practice and review.</p>
+    </footer>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
