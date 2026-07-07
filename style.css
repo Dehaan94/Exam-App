@@ -32,45 +32,35 @@
   padding: 36px;
 }
 
-header { text-align: center; margin-bottom: 30px; }
-
-.brand-strip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 16px;
+header {
+  text-align: center;
+  margin-bottom: 30px;
 }
 
-.brand-logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-}
-
-.brand-name {
-  font-size: 1rem;
+header h1 {
+  margin: 0;
+  font-size: clamp(2rem, 2.4vw, 2.8rem);
+  font-family: 'Inter', system-ui, sans-serif;
   font-weight: 700;
-  color: #0f172a;
   letter-spacing: 0.04em;
+  line-height: 1.1;
+  color: #0f172a;
+  white-space: nowrap;
+  display: inline-block;
+  position: relative;
 }
 
-.hero-label {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 16px;
+header h1::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -0.55rem;
+  width: 3.5rem;
+  height: 3px;
   border-radius: 999px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--blue);
-  background: rgba(37, 99, 235, 0.12);
-  margin-bottom: 18px;
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0.95), rgba(37, 99, 235, 0.75));
 }
 
-header h1 { margin: 0; font-size: clamp(2.2rem, 2.6vw, 3.5rem); }
 header p { margin: 16px auto 0; max-width: 720px; color: #475569; line-height: 1.75; }
 
 .controls {
@@ -126,6 +116,52 @@ header p { margin: 16px auto 0; max-width: 720px; color: #475569; line-height: 1
   font-weight: 700;
   min-width: 110px;
   box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+}
+
+.timer-chip {
+  min-width: 160px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.timer-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #b45309;
+}
+
+.timer-icon {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #c2410c;
+}
+
+.timer-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.timer-button {
+  margin-top: 8px;
+  border-radius: 999px;
+  padding: 8px 16px;
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid rgba(100, 116, 139, 0.2);
+  font-size: 0.92rem;
+  font-weight: 700;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.timer-button:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: rgba(37, 99, 235, 0.3);
 }
 
 .status-chip span { font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.15em; }
@@ -225,11 +261,20 @@ button:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
 .result-badge { display: inline-flex; align-items: center; justify-content: center; padding: 8px 14px; border-radius: 999px; font-size: 0.95rem; font-weight: 700; color: white; }
 .result-pass { background: #16a34a; }
 .result-fail { background: #dc2626; }
+.summary-details { display: grid; gap: 20px; }
 .summary-grid { display: grid; gap: 12px; }
-.topic-item { display: grid; gap: 6px; }
+.topic-item { display: grid; gap: 6px; padding: 16px; border-radius: 18px; background: #ffffff; border: 1px solid rgba(148, 163, 184, 0.2); }
 .topic-meta { display: flex; justify-content: space-between; font-size: 0.95rem; color: #334155; }
-.topic-bar { height: 8px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+.topic-summary { font-size: 0.9rem; color: #475569; }
+.topic-bar { height: 10px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
 .topic-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--blue), var(--green)); box-shadow: 0 0 10px rgba(77, 174, 255, 0.25); }
+.focus-section { padding: 18px 20px; border-radius: 18px; background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(37, 99, 235, 0.16); }
+.topic-limit-note { margin: 0; color: #334155; font-size: 0.95rem; font-weight: 700; }
+.focus-section h4 { margin: 0 0 8px; color: #0f172a; }
+.focus-section p { margin: 0 0 12px; color: #334155; }
+.focus-list { margin: 0; padding-left: 20px; color: #0f172a; }
+.focus-list li { margin-bottom: 8px; }
+.focus-good { background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.18); }
 .hidden { display: none; }
 footer { margin-top: 32px; text-align: center; color: #64748b; font-size: 0.95rem; }
 

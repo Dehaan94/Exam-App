@@ -12,6 +12,8 @@
   feedbackText: document.getElementById('feedbackText'),
   explanation: document.getElementById('explanation'),
   summary: document.getElementById('summary'),
+  timerDisplay: document.getElementById('timerDisplay'),
+  startTimerButton: document.getElementById('startTimer'),
 };
 
 const state = {
@@ -22,6 +24,9 @@ const state = {
   selectedAnswer: null,
   score: 0,
   topicStats: {},
+  timerSeconds: 0,
+  timerInterval: null,
+  timerRunning: false,
 };
 
 function resetQuestionView() {
@@ -60,26 +65,73 @@ function updateTopicStats(topic, isCorrect) {
   }
 }
 
+function formatTime(seconds) {
+  const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+  const secs = (seconds % 60).toString().padStart(2, '0');
+  return `${mins}:${secs}`;
+}
+
+function updateTimerDisplay() {
+  dom.timerDisplay.textContent = formatTime(state.timerSeconds);
+}
+
+function resetTimer() {
+  clearInterval(state.timerInterval);
+  state.timerSeconds = 0;
+  state.timerRunning = false;
+  state.timerInterval = null;
+  updateTimerDisplay();
+  dom.startTimerButton.disabled = false;
+  dom.startTimerButton.textContent = 'Start';
+}
+
+function startTimer() {
+  if (state.timerRunning) return;
+  state.timerRunning = true;
+  dom.startTimerButton.disabled = true;
+  dom.startTimerButton.textContent = 'Running';
+  state.timerInterval = setInterval(() => {
+    state.timerSeconds += 1;
+    updateTimerDisplay();
+  }, 1000);
+}
+
+function stopTimer() {
+  if (!state.timerRunning) return;
+  clearInterval(state.timerInterval);
+  state.timerInterval = null;
+  state.timerRunning = false;
+  updateTimerDisplay();
+}
+
 async function loadExamData() {
   try {
-    const response = await fetch('data/exam-data.json');
+    const response = await fetch('/api/questions');
+    if (!response.ok) {
+      throw new Error(`Server responded with ${response.status}`);
+    }
     const data = await response.json();
     state.examSets = data.examSets;
     state.activeExamId = state.examSets[0]?.id || '';
     populateExamSelector();
     startExam(state.activeExamId);
   } catch (error) {
-    dom.questionText.textContent = 'Unable to load exam data. Please confirm the data file exists.';
+    dom.questionText.textContent = 'Unable to load exam data. Please confirm the backend server is running and connected to the database.';
     console.error(error);
   }
 }
 
 function populateExamSelector() {
+  const displayNames = {
+    gitlab: 'GitLab Fundamentals Associate',
+    sql: 'SQL Fundamentals',
+  };
+
   dom.examSelect.innerHTML = '';
   state.examSets.forEach((exam) => {
     const option = document.createElement('option');
     option.value = exam.id;
-    option.textContent = exam.name;
+    option.textContent = displayNames[exam.id] || exam.name;
     dom.examSelect.appendChild(option);
   });
   dom.examSelect.value = state.activeExamId;
@@ -95,6 +147,7 @@ function startExam(examId) {
   state.score = 0;
   state.selectedAnswer = null;
   initTopicStats();
+  resetTimer();
   updateScore();
   renderCurrentQuestion();
 }
@@ -178,6 +231,7 @@ function goToNextQuestion() {
 }
 
 function showFinalSummary() {
+  stopTimer();
   const percent = state.questions.length ? Math.round((state.score / state.questions.length) * 100) : 0;
   dom.questionText.textContent = 'Quiz complete!';
   updateProgress();
@@ -189,24 +243,18 @@ function showFinalSummary() {
     'Use the topic breakdown below to focus your next practice session.'
   );
 
-  const topicItems = Object.entries(state.topicStats)
-    .map(([topic, stats]) => {
-      const topicPercent = stats.total ? Math.round((stats.correct / stats.total) * 100) : 0;
-      return `
-        <div class="topic-item">
-          <div class="topic-meta">
-            <span>${topic}</span>
-            <strong>${topicPercent}%</strong>
-          </div>
-          <div class="topic-bar">
-            <div class="topic-bar-fill" style="width: ${topicPercent}%"></div>
-          </div>
-        </div>
-      `;
-    })
-    .join('');
+  const topicData = getSortedTopicData();
+  const topTopics = topicData.slice(0, 5);
+  const extraTopics = Math.max(0, topicData.length - topTopics.length);
+
+  const topicItems = buildTopicItems(topTopics);
+  const improvementSection = buildImprovementSection(topTopics);
+  const extraTopicsNote = extraTopics
+    ? `<p class="topic-limit-note">Showing the 5 most important topics. ${extraTopics} more topic${extraTopics > 1 ? 's' : ''} are available.</p>`
+    : '';
 
   const passed = percent >= 75;
+  const timeTaken = formatTime(state.timerSeconds);
   dom.summary.innerHTML = `
     <div class="result-head">
       <div>
@@ -218,9 +266,73 @@ function showFinalSummary() {
         ${passed ? 'Pass' : 'Fail'}
       </span>
     </div>
-    <div class="summary-grid">${topicItems}</div>
+    <div class="summary-details">
+      <p>You completed the exam in <strong>${timeTaken}</strong>.</p>
+      <p>Your performance by topic is shown below.</p>
+      <div class="summary-grid">${topicItems}</div>
+      ${extraTopicsNote}
+      ${improvementSection}
+    </div>
   `;
   dom.summary.classList.remove('hidden');
+}
+
+function getSortedTopicData() {
+  return Object.entries(state.topicStats)
+    .map(([topic, stats]) => {
+      const percent = stats.total ? Math.round((stats.correct / stats.total) * 100) : 0;
+      return {
+        topic,
+        percent,
+        correct: stats.correct,
+        total: stats.total,
+        needsImprovement: percent < 75,
+      };
+    })
+    .sort((a, b) => {
+      if (a.needsImprovement !== b.needsImprovement) {
+        return a.needsImprovement ? -1 : 1;
+      }
+      if (a.percent !== b.percent) {
+        return a.percent - b.percent;
+      }
+      return b.total - a.total;
+    });
+}
+
+function buildTopicItems(topTopics) {
+  return topTopics
+    .map(({ topic, percent, correct, total }) => `
+      <div class="topic-item">
+        <div class="topic-meta">
+          <span>${topic}</span>
+          <strong>${percent}%</strong>
+        </div>
+        <div class="topic-bar">
+          <div class="topic-bar-fill" style="width: ${percent}%"></div>
+        </div>
+        <div class="topic-summary">${correct} / ${total} correct</div>
+      </div>
+    `)
+    .join('');
+}
+
+function buildImprovementSection(topTopics) {
+  const improvementItems = topTopics
+    .filter((topic) => topic.needsImprovement)
+    .map((topic) => `<li>${topic.topic}: ${topic.correct} / ${topic.total} correct (${topic.percent}%)</li>`)
+    .join('');
+
+  return improvementItems
+    ? `<div class="focus-section">
+         <h4>Areas to improve</h4>
+         <p>Focus your next practice on the topics below:</p>
+         <ul class="focus-list">${improvementItems}</ul>
+       </div>`
+    : `<div class="focus-section focus-good">
+         <h4>Great work!</h4>
+         <p>You scored 75% or higher in all topics.</p>
+       </div>`;
 }
 
 function restartQuiz() {
@@ -265,6 +377,7 @@ dom.examSelect.addEventListener('change', (event) => {
 dom.checkAnswerButton.addEventListener('click', showAnswer);
 dom.nextQuestionButton.addEventListener('click', goToNextQuestion);
 dom.restartQuizButton.addEventListener('click', restartQuiz);
+dom.startTimerButton.addEventListener('click', startTimer);
 document.addEventListener('keydown', handleKeyboardNavigation);
 
 loadExamData();
