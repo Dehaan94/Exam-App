@@ -245,13 +245,9 @@ function showFinalSummary() {
 
   const topicData = getSortedTopicData();
   const topTopics = topicData.slice(0, 5);
-  const extraTopics = Math.max(0, topicData.length - topTopics.length);
 
   const topicItems = buildTopicItems(topTopics);
   const improvementSection = buildImprovementSection(topTopics);
-  const extraTopicsNote = extraTopics
-    ? `<p class="topic-limit-note">Showing the 5 most important topics. ${extraTopics} more topic${extraTopics > 1 ? 's' : ''} are available.</p>`
-    : '';
 
   const passed = percent >= 75;
   const timeTaken = formatTime(state.timerSeconds);
@@ -270,7 +266,6 @@ function showFinalSummary() {
       <p>You completed the exam in <strong>${timeTaken}</strong>.</p>
       <p>Your performance by topic is shown below.</p>
       <div class="summary-grid">${topicItems}</div>
-      ${extraTopicsNote}
       ${improvementSection}
     </div>
   `;
