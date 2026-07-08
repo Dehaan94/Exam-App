@@ -21,7 +21,7 @@ const state = {
   activeExamId: '',
   questions: [],
   currentIndex: 0,
-  selectedAnswer: null,
+  selectedAnswers: [],
   score: 0,
   topicStats: {},
   timerSeconds: 0,
@@ -32,7 +32,7 @@ const state = {
 function resetQuestionView() {
   dom.feedback.classList.add('hidden');
   dom.summary.classList.add('hidden');
-  state.selectedAnswer = null;
+  state.selectedAnswers = [];
   dom.checkAnswerButton.disabled = false;
   dom.nextQuestionButton.disabled = true;
   dom.choiceList.innerHTML = '';
@@ -124,7 +124,7 @@ async function loadExamData() {
 function populateExamSelector() {
   const displayNames = {
     gitlab: 'GitLab Fundamentals Associate',
-    sql: 'SQL Fundamentals',
+    sql: 'PostreSQL Fundimentals',
   };
 
   dom.examSelect.innerHTML = '';
@@ -145,18 +145,71 @@ function startExam(examId) {
   state.questions = selectedExam.questions;
   state.currentIndex = 0;
   state.score = 0;
-  state.selectedAnswer = null;
+  state.selectedAnswers = [];
   initTopicStats();
   resetTimer();
   updateScore();
   renderCurrentQuestion();
 }
 
+function normalizeChoiceValue(value) {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function resolveAnswerValue(value, choices) {
+  const trimmedValue = String(value ?? '').trim();
+  if (!trimmedValue) return '';
+
+  const directMatch = choices.find((choice) => normalizeChoiceValue(choice) === normalizeChoiceValue(trimmedValue));
+  if (directMatch) return directMatch;
+
+  const letterMatch = trimmedValue.match(/^[a-d]$/i);
+  if (letterMatch) {
+    const index = trimmedValue.toLowerCase().charCodeAt(0) - 97;
+    return choices[index] || trimmedValue;
+  }
+
+  return trimmedValue;
+}
+
+function getCorrectAnswers(question) {
+  const rawAnswer = question?.answer;
+  const choices = question?.choices || [];
+
+  if (Array.isArray(rawAnswer)) {
+    return rawAnswer.map((answer) => resolveAnswerValue(answer, choices));
+  }
+
+  const answerText = String(rawAnswer ?? '').trim();
+  if (!answerText) {
+    return [];
+  }
+
+  const tokens = answerText
+    .split(/\s*(?:,|;|\||\band\b)\s*/i)
+    .map((token) => token.trim())
+    .filter(Boolean);
+
+  return tokens.map((token) => resolveAnswerValue(token, choices));
+}
+
+function hasMultipleCorrectAnswers(question) {
+  return getCorrectAnswers(question).length > 1;
+}
+
+function answersMatch(selectedAnswers, correctAnswers) {
+  const normalizedSelected = selectedAnswers.map((answer) => normalizeChoiceValue(answer)).sort();
+  const normalizedCorrect = correctAnswers.map((answer) => normalizeChoiceValue(answer)).sort();
+
+  return normalizedSelected.length === normalizedCorrect.length && normalizedSelected.every((answer, index) => answer === normalizedCorrect[index]);
+}
+
 function renderCurrentQuestion() {
   const question = state.questions[state.currentIndex];
   if (!question) return;
 
-  dom.questionText.textContent = `${question.id}. ${question.question}`;
+  const multiSelectLabel = hasMultipleCorrectAnswers(question) ? ' (Select all that apply)' : '';
+  dom.questionText.textContent = `${question.id}. ${question.question}${multiSelectLabel}`;
   resetQuestionView();
   updateProgress();
 
@@ -172,7 +225,21 @@ function renderCurrentQuestion() {
 }
 
 function selectChoice(answer, button) {
-  state.selectedAnswer = answer;
+  const current = state.questions[state.currentIndex];
+  const multiSelect = hasMultipleCorrectAnswers(current);
+
+  if (multiSelect) {
+    const alreadySelected = state.selectedAnswers.includes(answer);
+    if (alreadySelected) {
+      state.selectedAnswers = state.selectedAnswers.filter((item) => item !== answer);
+    } else {
+      state.selectedAnswers.push(answer);
+    }
+    button.classList.toggle('selected', state.selectedAnswers.includes(answer));
+    return;
+  }
+
+  state.selectedAnswers = [answer];
   getChoiceButtons().forEach((item) => item.classList.remove('selected'));
   button.classList.add('selected');
 }
@@ -192,29 +259,34 @@ function getChoiceButtons() {
 }
 
 function showAnswer() {
-  if (!state.selectedAnswer) {
+  if (!state.selectedAnswers.length) {
     showFeedback('Please select an option before checking the answer.');
     return;
   }
 
   const current = state.questions[state.currentIndex];
+  const correctAnswers = getCorrectAnswers(current);
+  const multiSelect = hasMultipleCorrectAnswers(current);
+
   getChoiceButtons().forEach((button) => {
-    const isCorrect = button.dataset.choice === current.answer;
-    const isSelected = button.dataset.choice === state.selectedAnswer;
+    const isCorrectChoice = correctAnswers.some((answer) => normalizeChoiceValue(answer) === normalizeChoiceValue(button.dataset.choice));
+    const isSelected = state.selectedAnswers.some((answer) => normalizeChoiceValue(answer) === normalizeChoiceValue(button.dataset.choice));
     button.disabled = true;
-    button.classList.toggle('correct', isCorrect);
-    button.classList.toggle('incorrect', isSelected && !isCorrect);
+    button.classList.toggle('correct', isCorrectChoice);
+    button.classList.toggle('incorrect', isSelected && !isCorrectChoice);
   });
 
-  const correct = state.selectedAnswer === current.answer;
+  const correct = answersMatch(state.selectedAnswers, correctAnswers);
   updateTopicStats(current.topic || 'General', correct);
 
   if (correct) {
     state.score += 1;
     updateScore();
     showFeedback('Correct!', current.explanation);
+  } else if (multiSelect) {
+    showFeedback(`Incorrect. Correct answers: ${correctAnswers.join(', ')}`, current.explanation);
   } else {
-    showFeedback(`Incorrect. Correct answer: ${current.answer}`, current.explanation);
+    showFeedback(`Incorrect. Correct answer: ${correctAnswers[0] || current.answer}`, current.explanation);
   }
 
   dom.checkAnswerButton.disabled = true;
