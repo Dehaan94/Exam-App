@@ -1,0 +1,9 @@
+{
+  "rewrites": [
+    { "source": "/api/questions", "destination": "/api/questions.js" }
+  ],
+  "routes": [
+    { "src": "/favicon.ico", "dest": "/favicon.ico" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}
