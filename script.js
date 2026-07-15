@@ -122,7 +122,7 @@ function stopTimer() {
 
 async function loadExamData() {
   try {
-    const response = await fetch('/api/questions');
+    const response = await fetch('/api/questions', { cache: 'no-store' });
     if (!response.ok) {
       throw new Error(`Server responded with ${response.status}`);
     }
