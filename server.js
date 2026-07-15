@@ -79,15 +79,30 @@ function categorizeSqlQuestion(question) {
   return sqlTopicMap[key] || 'PL/SQL Basics';
 }
 
+function shuffleArray(items) {
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 function mapRowsToQuestions(rows, categoryFn) {
-  return rows.map((row, index) => ({
-    id: index + 1,
-    question: row.question,
-    choices: [row.option1, row.option2, row.option3, row.option4].filter(Boolean),
-    answer: row.answer,
-    explanation: row.description,
-    topic: categoryFn(row.question),
-  }));
+  const shuffledRows = shuffleArray(rows).slice(0, 20);
+
+  return shuffledRows.map((row, index) => {
+    const choices = [row.option1, row.option2, row.option3, row.option4].filter(Boolean);
+
+    return {
+      id: index + 1,
+      question: row.question,
+      choices: shuffleArray(choices),
+      answer: row.answer,
+      explanation: row.description,
+      topic: categoryFn(row.question),
+    };
+  });
 }
 
 async function loadExamSet(tableName, examId, examName, categoryFn) {

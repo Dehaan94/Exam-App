@@ -71,6 +71,22 @@ function formatTime(seconds) {
   return `${mins}:${secs}`;
 }
 
+function shuffleArray(items) {
+  const shuffled = [...items];
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+function buildShuffledQuestions(questions) {
+  return shuffleArray(questions).map((question) => ({
+    ...question,
+    choices: shuffleArray(question.choices || []),
+  }));
+}
+
 function updateTimerDisplay() {
   dom.timerDisplay.textContent = formatTime(state.timerSeconds);
 }
@@ -124,7 +140,7 @@ async function loadExamData() {
 function populateExamSelector() {
   const displayNames = {
     gitlab: 'GitLab Fundamentals Associate',
-    sql: 'PostreSQL Fundimentals',
+    sql: 'PostgreSQL Fundamentals',
   };
 
   dom.examSelect.innerHTML = '';
@@ -142,10 +158,9 @@ function startExam(examId) {
   if (!selectedExam) return;
 
   state.activeExamId = selectedExam.id;
-  state.questions = selectedExam.questions;
+  state.questions = buildShuffledQuestions(selectedExam.questions);
   state.currentIndex = 0;
   state.score = 0;
-  state.selectedAnswers = [];
   initTopicStats();
   resetTimer();
   updateScore();
@@ -209,7 +224,7 @@ function renderCurrentQuestion() {
   if (!question) return;
 
   const multiSelectLabel = hasMultipleCorrectAnswers(question) ? ' (Select all that apply)' : '';
-  dom.questionText.textContent = `${question.id}. ${question.question}${multiSelectLabel}`;
+  dom.questionText.textContent = `${state.currentIndex + 1}. ${question.question}${multiSelectLabel}`;
   resetQuestionView();
   updateProgress();
 
@@ -248,8 +263,24 @@ function updateScore() {
   dom.scoreIndicator.textContent = state.score;
 }
 
+function formatFeedbackMessage(message) {
+  if (message.startsWith('Incorrect.')) {
+    return message.replace(/^Incorrect\./, '<span class="error-word">Incorrect.</span>');
+  }
+  if (message.startsWith('Correct!')) {
+    return message.replace(/^Correct!/, '<span class="success-word">Correct!</span>');
+  }
+  return message;
+}
+
 function showFeedback(message, details = '') {
-  dom.feedbackText.textContent = message;
+  const formattedMessage = formatFeedbackMessage(message);
+
+  if (formattedMessage !== message) {
+    dom.feedbackText.innerHTML = formattedMessage;
+  } else {
+    dom.feedbackText.textContent = message;
+  }
   dom.explanation.textContent = details;
   dom.feedback.classList.remove('hidden');
 }
