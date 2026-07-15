@@ -3,25 +3,15 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const DATABASE_URL = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL;
+const DEFAULT_DATABASE_URL = 'postgresql://neondb_owner:npg_RwcKJPuN2v9l@ep-wandering-recipe-ab7zvh7v.eu-west-2.aws.neon.tech/neondb?sslmode=require';
+const DATABASE_URL = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || process.env.NETLIFY_DATABASE_URL || DEFAULT_DATABASE_URL;
 
-if (!DATABASE_URL) {
-  console.error('Missing DATABASE_URL in Netlify function environment.');
-}
-
-const pool = DATABASE_URL
-  ? new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } })
-  : null;
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+});
 
 exports.handler = async function () {
-  if (!pool) {
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Missing DATABASE_URL in Netlify environment.' }),
-    };
-  }
-
   try {
     const examConfigs = [
       { table: 'gitlabquestions', id: 'gitlab', name: 'GitLab Fundamentals Associate' },
@@ -44,11 +34,7 @@ exports.handler = async function () {
       examSets.push({ id: config.id, name: config.name, questions });
     }
 
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ examSets }),
-    };
+    return buildSuccessResponse(examSets);
   } catch (error) {
     console.error('Netlify function error:', error);
     return {
@@ -58,6 +44,14 @@ exports.handler = async function () {
     };
   }
 };
+
+function buildSuccessResponse(examSets) {
+  return {
+    statusCode: 200,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ examSets }),
+  };
+}
 
 function shuffleArray(items) {
   const shuffled = [...items];
