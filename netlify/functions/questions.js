@@ -3,15 +3,25 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
-const DATABASE_URL = process.env.DATABASE_URL;
+const DATABASE_URL = process.env.DATABASE_URL || process.env.NEON_DATABASE_URL;
 
 if (!DATABASE_URL) {
-  return;
+  console.error('Missing DATABASE_URL in Netlify function environment.');
 }
 
-const pool = new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } });
+const pool = DATABASE_URL
+  ? new Pool({ connectionString: DATABASE_URL, ssl: { rejectUnauthorized: false } })
+  : null;
 
-exports.handler = async function (event, context) {
+exports.handler = async function () {
+  if (!pool) {
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Missing DATABASE_URL in Netlify environment.' }),
+    };
+  }
+
   try {
     const examConfigs = [
       { table: 'gitlabquestions', id: 'gitlab', name: 'GitLab Fundamentals Associate' },
@@ -40,6 +50,7 @@ exports.handler = async function (event, context) {
       body: JSON.stringify({ examSets }),
     };
   } catch (error) {
+    console.error('Netlify function error:', error);
     return {
       statusCode: 500,
       headers: { 'Content-Type': 'application/json' },
